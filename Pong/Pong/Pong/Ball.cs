@@ -25,7 +25,7 @@ namespace Pong
         float ballSpeed = 4;
 
 
-        float ballStartSpeed = 12f;
+        float ballStartSpeed = 10f;
 
         public void ModifyBallSpeed(float speed)
         {
@@ -80,25 +80,40 @@ namespace Pong
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         private void CheckWallCollision()
         {
             // check against left bounding
             if (position.X < 0)
             {
-                position.X = 0;
-                motion.X *= -1;
+                //position.X = 0;
+                //motion.X *= -1;
+
+                // reset ball and increase player 2 score
+                StartPosition();
+                PongGame.player1_Lives -= 1;
+
             }
             // check against right bounding
             if (position.X + texture.Width > screenBounds.Width)
             {
-                position.X = screenBounds.Width - texture.Width;
-                motion.X *= -1;
+                //position.X = screenBounds.Width - texture.Width;
+                //motion.X *= -1;
+
+                // reset ball and increase player 2 score
+                StartPosition();
+                PongGame.player2_Lives -= 1;
             }
-            // check against right bounding
+            // check against top bounding
             if (position.Y < 0)
             {
                 position.Y = 0;
                 motion.Y *= -1;
+
+                
             }
             // check against bottom bounding
             if(position.Y > screenBounds.Height - texture.Height)
@@ -124,7 +139,7 @@ namespace Pong
             position.Y = screenBounds.Height /2;
         }
 
-        public void PaddleCollision(Rectangle paddleLocation)
+        public void PaddleCollision(Rectangle paddle1, Rectangle paddle2)
         {
             // rectangle to check for collision
             Rectangle ballLocation = new Rectangle(
@@ -134,11 +149,19 @@ namespace Pong
                 texture.Height);
 
             // check collision with paddle and change direction of the ball
-            if (paddleLocation.Intersects(ballLocation))
+            if (paddle1.Intersects(ballLocation))
             {
-                position.X = paddleLocation.X - texture.Height;
+                position.X = paddle1.X + texture.Width;
                 motion.X *= -1;
+                PongGame.pongScore++;
             }
+            if (paddle2.Intersects(ballLocation))
+            {
+                position.X = paddle2.X - texture.Height;
+                motion.X *= -1;
+                PongGame.pongScore++;
+            }
+            
         }
 
         public void Draw(SpriteBatch spriteBatch)

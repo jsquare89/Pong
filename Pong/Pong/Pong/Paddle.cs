@@ -19,7 +19,6 @@ namespace Pong
         Vector2 motion;
         Vector2 position;
         float paddleSpeed = 15f;
-        float rotationAngle;
 
         KeyboardState keyboard;
         GamePadState playerGamePad;
@@ -31,7 +30,6 @@ namespace Pong
         {
             this.playerIndex = playerIndex;
             this.texture = texture;
-            rotationAngle = MathHelper.PiOver2;
             this.screenBounds = screenBounds;
             
             StartPosition();
@@ -51,7 +49,6 @@ namespace Pong
                 playerGamePad = GamePad.GetState(PlayerIndex.Two);
                 p2HandleInput();
             }
-            
             motion.Y *= paddleSpeed;
             position += motion;
             LockPaddle();            
@@ -59,11 +56,11 @@ namespace Pong
 
         private void p1HandleInput()
         {
-            if (keyboard.IsKeyDown(Keys.Up) ||
+            if (keyboard.IsKeyDown(Keys.W) ||
                 playerGamePad.IsButtonDown(Buttons.LeftThumbstickUp) ||
                 playerGamePad.IsButtonDown(Buttons.DPadUp))
                 motion.Y = -1;
-            if (keyboard.IsKeyDown(Keys.Down) ||
+            if (keyboard.IsKeyDown(Keys.S) ||
                 playerGamePad.IsButtonDown(Buttons.LeftThumbstickDown) ||
                 playerGamePad.IsButtonDown(Buttons.DPadDown))
                 motion.Y = 1;
@@ -72,11 +69,11 @@ namespace Pong
 
         private void p2HandleInput()
         {
-            if (keyboard.IsKeyDown(Keys.W) ||
+            if (keyboard.IsKeyDown(Keys.Up) ||
                 playerGamePad.IsButtonDown(Buttons.LeftThumbstickUp) ||
                 playerGamePad.IsButtonDown(Buttons.DPadUp))
                 motion.Y = -1;
-            if (keyboard.IsKeyDown(Keys.S) ||
+            if (keyboard.IsKeyDown(Keys.Down) ||
                 playerGamePad.IsButtonDown(Buttons.LeftThumbstickDown) ||
                 playerGamePad.IsButtonDown(Buttons.DPadDown))
                 motion.Y = 1;
@@ -94,12 +91,12 @@ namespace Pong
         {
             if (playerIndex == 1)
             {
-                position.X = screenBounds.Width - texture.Width;
+                position.X = 0;
                 position.Y = (screenBounds.Height - texture.Height) / 2;
             }
             else if(playerIndex ==2)
             {
-                position.X = 0;
+                position.X = screenBounds.Width - texture.Width;
                 position.Y = (screenBounds.Height - texture.Height) / 2;
             }
         }

@@ -36,16 +36,15 @@ namespace Pong
         Paddle player2Paddle;
         Ball ball;
 
-        // Controls support
-        GamePadState p1GamePad;
-        GamePadState p2GamePad;
-        KeyboardState keyboard;
-
         // score support
-        int player1_Score;
-        int player2_Score;
-        Vector2 player1ScoreLocation;
-        Vector2 player2ScoreLocation;
+        public static int player1_Lives;
+        public static int player2_Lives;
+        public static int pongScore;
+        int highScoreCount;
+        public static bool scoreSaved;
+        Vector2 player1LifePosition;
+        Vector2 player2LifePosition;
+        Vector2 scorePosition;
 
         // Save data handling
         StorageDevice device; // HDD saving to
@@ -55,7 +54,7 @@ namespace Pong
         //[Serializable]
         public struct SaveGameData
         {
-            public int highScore;
+            public int[] highScore;
         }
         SaveGameData saveGameData;
 
@@ -100,10 +99,14 @@ namespace Pong
         protected override void Initialize()
         {
             // set position for player score to be displayed
-            player1ScoreLocation.X = 20;
-            player1ScoreLocation.Y = 20;
-            player2ScoreLocation.X = screenRectangle.Width - 50;
-            player2ScoreLocation.Y = 20;
+            player1LifePosition.X = 100;
+            player1LifePosition.Y = 20;
+            player2LifePosition.X = screenRectangle.Width - 120;
+            player2LifePosition.Y = 20;
+            scorePosition.X = screenRectangle.Width / 2 - 70;
+            scorePosition.Y = 20;
+
+            currentGameState = GameState.Playing;
             base.Initialize();
         }
 
@@ -131,7 +134,20 @@ namespace Pong
             bgcolor = Color.DarkSlateGray;
             paused = false;
 
+            // initialize save game data
+            pongScore = 0;
+            highScoreCount = 10;
+            scoreSaved = false;
+            saveGameData.highScore = new int[highScoreCount];
+            for (int i = 0; i < highScoreCount; i++)
+            {
+                saveGameData.highScore[i] = 0;
+            }
+            // Load save game high score into saveGameData struct
+            GetDevice();
+
             startGame();
+            
         }
 
         /// <summary>
@@ -139,11 +155,18 @@ namespace Pong
         /// </summary>
         protected void startGame()
         {
+
+            Load();
+
+            // initialise paddles and ball
             ball.setStart();
             player1Paddle.StartPosition();
+            player2Paddle.StartPosition();
             ball.StartPosition();
-            player1_Score = 0;
-            player2_Score = 0;
+
+            // set player lives
+            player1_Lives = 5;
+            player2_Lives = 5;
 
         }
 
@@ -165,30 +188,69 @@ namespace Pong
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            
+
 
             // Allows the game to exit
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
                 Keyboard.GetState().IsKeyDown(Keys.Escape))
                 this.Exit();
 
-            if (!paused)
+            if (currentGameState == GameState.Playing && player1_Lives > 0 && player2_Lives > 0)
             {
                 //update ball and paddle
                 player1Paddle.Update();
                 player2Paddle.Update();
                 ball.Update();
-                //ball.PaddleCollision(player1Paddle.GetBounds());
-                ball.PaddleCollision(player2Paddle.GetBounds());
+                ball.PaddleCollision(player1Paddle.GetBounds(), player2Paddle.GetBounds());
+                LoadHighScore();
+            }else if(player1_Lives == 0 || player2_Lives  == 0)
+            {
+                if (!scoreSaved)
+                    UpdateSavedHighScore();
             }
 
             base.Update(gameTime);
         }
 
+        private void UpdateSavedHighScore()
+        {
+            
+            // get score index
+            int scoreIndex = -1;
+            for(int i=0; i<highScoreCount; i++)
+            {
+                if (pongScore > saveGameData.highScore[i])
+                {
+                    scoreIndex = i;
+                    break;
+                }
+            }
+               
+            // move scores down and add score at index
+            if(scoreIndex> -1)
+            {
+                for(int i = highScoreCount -1; i > scoreIndex; i--)
+                {
+                    saveGameData.highScore[i] = saveGameData.highScore[i - 1];
+                }
+
+                saveGameData.highScore[scoreIndex] = pongScore;
+                Save();
+                scoreSaved = true;
+               
+            } 
+            
+        }
+
+        private void LoadHighScore()
+        {
+            Load();
+        }
+
         /// <summary>
         /// gets strorage device to save to
         /// </summary>
-        public void GetDevice()
+        private void GetDevice()
         {
             //Starts the selection processes.
             IAsyncResult result = StorageDevice.BeginShowSelector(PlayerIndex.One, null, null);
@@ -203,7 +265,7 @@ namespace Pong
             result.AsyncWaitHandle.Close();
         }
 
-        public void GetContainer()
+        private void GetContainer()
         {
             //Starts the selection processes.
             IAsyncResult result = device.BeginOpenContainer(containerName, null, null);
@@ -218,8 +280,9 @@ namespace Pong
             result.AsyncWaitHandle.Close();
         }
 
-        public void Save()
+        private void Save()
         {
+            GetContainer();
             // Check to see whether the save exists.
             if (container.FileExists(filename))
                 // Delete it so that we can create one fresh.
@@ -237,8 +300,9 @@ namespace Pong
         /// 
         /// </summary>
         /// <returns>bool true if loaded from file. false if not file to load</returns>
-        public bool Load()
+        private bool Load()
         {
+            GetContainer();
             // Check to see whether the save exists.
             if (!container.FileExists(filename))
             {
@@ -265,7 +329,9 @@ namespace Pong
             GraphicsDevice.Clear(bgcolor);
 
             spriteBatch.Begin();
-            
+            spriteBatch.DrawString(font, player1_Lives.ToString(), player1LifePosition, Color.White);
+            spriteBatch.DrawString(font, player2_Lives.ToString(), player2LifePosition, Color.White);
+            spriteBatch.DrawString(font, "Score: " + pongScore, scorePosition, Color.White);
             player1Paddle.Draw(spriteBatch);
             player2Paddle.Draw(spriteBatch);
             ball.Draw(spriteBatch);
