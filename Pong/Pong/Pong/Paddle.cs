@@ -22,10 +22,14 @@ namespace Pong
         float rotationAngle;
 
         KeyboardState keyboard;
-        GamePadState gamepad;
+        GamePadState playerGamePad;
 
-        public Paddle(Texture2D texture, Rectangle screenBounds)
+        int playerIndex;
+
+
+        public Paddle(Texture2D texture, Rectangle screenBounds, int playerIndex)
         {
+            this.playerIndex = playerIndex;
             this.texture = texture;
             rotationAngle = MathHelper.PiOver2;
             this.screenBounds = screenBounds;
@@ -35,24 +39,47 @@ namespace Pong
 
         public void Update()
         {
-
             motion = Vector2.Zero;
-
             keyboard = Keyboard.GetState();
-            gamepad = GamePad.GetState(PlayerIndex.One);
-
-            if (keyboard.IsKeyDown(Keys.Up) ||
-                gamepad.IsButtonDown(Buttons.LeftThumbstickUp) ||
-                gamepad.IsButtonDown(Buttons.DPadUp))
-                motion.Y = -1;
-            if (keyboard.IsKeyDown(Keys.Down) ||
-                gamepad.IsButtonDown(Buttons.LeftThumbstickDown) ||
-                gamepad.IsButtonDown(Buttons.DPadDown))
-                motion.Y = 1;
-
+            if (playerIndex == 1)
+            {
+                playerGamePad = GamePad.GetState(PlayerIndex.One);
+                p1HandleInput();
+            }
+            if(playerIndex ==2)
+            {
+                playerGamePad = GamePad.GetState(PlayerIndex.Two);
+                p2HandleInput();
+            }
+            
             motion.Y *= paddleSpeed;
             position += motion;
             LockPaddle();            
+        }
+
+        private void p1HandleInput()
+        {
+            if (keyboard.IsKeyDown(Keys.Up) ||
+                playerGamePad.IsButtonDown(Buttons.LeftThumbstickUp) ||
+                playerGamePad.IsButtonDown(Buttons.DPadUp))
+                motion.Y = -1;
+            if (keyboard.IsKeyDown(Keys.Down) ||
+                playerGamePad.IsButtonDown(Buttons.LeftThumbstickDown) ||
+                playerGamePad.IsButtonDown(Buttons.DPadDown))
+                motion.Y = 1;
+        }
+
+
+        private void p2HandleInput()
+        {
+            if (keyboard.IsKeyDown(Keys.W) ||
+                playerGamePad.IsButtonDown(Buttons.LeftThumbstickUp) ||
+                playerGamePad.IsButtonDown(Buttons.DPadUp))
+                motion.Y = -1;
+            if (keyboard.IsKeyDown(Keys.S) ||
+                playerGamePad.IsButtonDown(Buttons.LeftThumbstickDown) ||
+                playerGamePad.IsButtonDown(Buttons.DPadDown))
+                motion.Y = 1;
         }
 
         private void LockPaddle()
@@ -65,8 +92,16 @@ namespace Pong
 
         public void StartPosition()
         {
-            position.X = screenBounds.Width - texture.Width;
-            position.Y = (screenBounds.Height - texture.Height) /2;
+            if (playerIndex == 1)
+            {
+                position.X = screenBounds.Width - texture.Width;
+                position.Y = (screenBounds.Height - texture.Height) / 2;
+            }
+            else if(playerIndex ==2)
+            {
+                position.X = 0;
+                position.Y = (screenBounds.Height - texture.Height) / 2;
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch)

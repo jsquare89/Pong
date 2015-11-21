@@ -8,6 +8,9 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using System.Xml.Serialization;
+using Microsoft.Xna.Framework.Storage;
+using System.IO;
 
 namespace Pong
 {
@@ -21,21 +24,50 @@ namespace Pong
         SpriteBatch spriteBatch;
         SpriteFont font;
         Color bgcolor;
-        bool paused;
         Rectangle screenRectangle;
+        bool paused;
 
         // screen resolution
         const int X_RESOLUTION = 1280;
         const int Y_RESOLUTION = 720;
 
         // game objects
-        Paddle paddle;
+        Paddle player1Paddle;
+        Paddle player2Paddle;
         Ball ball;
+
+        // Controls support
+        GamePadState p1GamePad;
+        GamePadState p2GamePad;
+        KeyboardState keyboard;
 
         // score support
         int player1_Score;
         int player2_Score;
-        Vector2 scoreLocation;
+        Vector2 player1ScoreLocation;
+        Vector2 player2ScoreLocation;
+
+        // Save data handling
+        StorageDevice device; // HDD saving to
+        StorageContainer container; // STFS container to save to
+        string containerName = "PongGameStorage";
+        string filename = "savegame.sav";
+        //[Serializable]
+        public struct SaveGameData
+        {
+            public int highScore;
+        }
+        SaveGameData saveGameData;
+
+        // gamestates
+        enum GameState
+        {
+            MainMenu,
+            ScoreScreen,
+            Playing,
+        }
+        GameState currentGameState = GameState.MainMenu;
+        //Menu
 
         public PongGame()
         {
@@ -67,7 +99,11 @@ namespace Pong
         /// </summary>
         protected override void Initialize()
         {
-
+            // set position for player score to be displayed
+            player1ScoreLocation.X = 20;
+            player1ScoreLocation.Y = 20;
+            player2ScoreLocation.X = screenRectangle.Width - 50;
+            player2ScoreLocation.Y = 20;
             base.Initialize();
         }
 
@@ -81,13 +117,19 @@ namespace Pong
             spriteBatch = new SpriteBatch(GraphicsDevice);
             contentManager = Content;
 
+            //Add component for accessing save state on xbox
+#if (XBOX)
+            Components.Add(new GamerServicesComponent(this));
+#endif
+
             Texture2D tempTexture = Content.Load<Texture2D>("ball");
             ball = new Ball(tempTexture, screenRectangle);
             tempTexture = Content.Load<Texture2D>("paddle");
-            paddle = new Paddle(tempTexture, screenRectangle);
+            player1Paddle = new Paddle(tempTexture, screenRectangle, 1);
+            player2Paddle = new Paddle(tempTexture, screenRectangle, 2);
             font = Content.Load<SpriteFont>("font");
-            scoreLocation = new Vector2(20, 20);
             bgcolor = Color.DarkSlateGray;
+            paused = false;
 
             startGame();
         }
@@ -98,15 +140,14 @@ namespace Pong
         protected void startGame()
         {
             ball.setStart();
-            paddle.StartPosition();
-            ball.StartPosition(paddle.GetBounds());
+            player1Paddle.StartPosition();
+            ball.StartPosition();
             player1_Score = 0;
             player2_Score = 0;
-            paused = false;
 
         }
 
-        
+       
         
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
@@ -124,6 +165,8 @@ namespace Pong
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            
+
             // Allows the game to exit
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
                 Keyboard.GetState().IsKeyDown(Keys.Escape))
@@ -132,12 +175,85 @@ namespace Pong
             if (!paused)
             {
                 //update ball and paddle
-                paddle.Update();
-                ball.Update(paddle.GetBounds());
-                ball.PaddleCollision(paddle.GetBounds());
+                player1Paddle.Update();
+                player2Paddle.Update();
+                ball.Update();
+                //ball.PaddleCollision(player1Paddle.GetBounds());
+                ball.PaddleCollision(player2Paddle.GetBounds());
             }
 
             base.Update(gameTime);
+        }
+
+        /// <summary>
+        /// gets strorage device to save to
+        /// </summary>
+        public void GetDevice()
+        {
+            //Starts the selection processes.
+            IAsyncResult result = StorageDevice.BeginShowSelector(PlayerIndex.One, null, null);
+
+            // Wait for the WaitHandle to become signaled.
+            result.AsyncWaitHandle.WaitOne();
+
+            //Sets the global variable.
+            device = StorageDevice.EndShowSelector(result);
+
+            // Close the wait handle.
+            result.AsyncWaitHandle.Close();
+        }
+
+        public void GetContainer()
+        {
+            //Starts the selection processes.
+            IAsyncResult result = device.BeginOpenContainer(containerName, null, null);
+
+            // Wait for the WaitHandle to become signaled.
+            result.AsyncWaitHandle.WaitOne();
+
+            //Sets the global variable.
+            container = device.EndOpenContainer(result);
+
+            // Close the wait handle.
+            result.AsyncWaitHandle.Close();
+        }
+
+        public void Save()
+        {
+            // Check to see whether the save exists.
+            if (container.FileExists(filename))
+                // Delete it so that we can create one fresh.
+                container.DeleteFile(filename);
+
+            using (Stream stream = container.CreateFile(filename))
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(SaveGameData)); // create XML serializer object
+                serializer.Serialize(stream, saveGameData); // pass saveGameData struct to xml stream
+            }
+            container.Dispose();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>bool true if loaded from file. false if not file to load</returns>
+        public bool Load()
+        {
+            // Check to see whether the save exists.
+            if (!container.FileExists(filename))
+            {
+                // If not, dispose of the container and return.
+                container.Dispose();
+                return false;
+            }
+
+            // Open the file.
+            Stream stream = container.OpenFile(filename, FileMode.Open);
+            XmlSerializer serializer = new XmlSerializer(typeof(SaveGameData)); // create XML serializer object
+            saveGameData = (SaveGameData)serializer.Deserialize(stream); // get saved data from stream(file)
+            stream.Close();
+            container.Dispose();
+            return true;
         }
 
         /// <summary>
@@ -150,7 +266,8 @@ namespace Pong
 
             spriteBatch.Begin();
             
-            paddle.Draw(spriteBatch);
+            player1Paddle.Draw(spriteBatch);
+            player2Paddle.Draw(spriteBatch);
             ball.Draw(spriteBatch);
 
             spriteBatch.End();

@@ -17,3 +17,5 @@ C:\Users\Jarred\Documents\GitHub\Pong\Pong\Pong\Pong\bin\x86\Debug\Microsoft.Xna
 C:\Users\Jarred\Documents\GitHub\Pong\Pong\Pong\Pong\obj\x86\Debug\Pong.exe
 C:\Users\Jarred\Documents\GitHub\Pong\Pong\Pong\Pong\obj\x86\Debug\Pong.pdb
 C:\Users\Jarred\Documents\GitHub\Pong\Pong\Pong\Pong\bin\x86\Debug\Content\font.xnb
+C:\Users\Jarred\Documents\GitHub\Pong\Pong\Pong\Pong\bin\x86\Debug\Microsoft.Xna.Framework.Storage.dll
+C:\Users\Jarred\Documents\GitHub\Pong\Pong\Pong\Pong\bin\x86\Debug\Microsoft.Xna.Framework.Storage.xml

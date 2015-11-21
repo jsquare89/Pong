@@ -56,7 +56,7 @@ namespace Pong
             gameStart = false;
         }
 
-        public void Update(Rectangle paddleLocation)
+        public void Update()
         {
             collided = false;
 
@@ -76,7 +76,7 @@ namespace Pong
             else
             {
                 //reset ball to starting paddle
-                StartPosition(paddleLocation);
+                StartPosition();
             }
         }
 
@@ -109,7 +109,7 @@ namespace Pong
         }
 
 
-        public void StartPosition(Rectangle paddleLocation)
+        public void StartPosition()
         {
             Random rand = new Random();
 
@@ -120,8 +120,8 @@ namespace Pong
             ballSpeed = ballStartSpeed;
             
             // set ball position
-            position.X = paddleLocation.X - texture.Width;
-            position.Y = paddleLocation.Y + (paddleLocation.Height/2 - texture.Height/2);
+            position.X = screenBounds.Width /2 ;
+            position.Y = screenBounds.Height /2;
         }
 
         public void PaddleCollision(Rectangle paddleLocation)
