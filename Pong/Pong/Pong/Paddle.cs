@@ -51,7 +51,8 @@ namespace Pong
             }
             motion.Y *= paddleSpeed;
             position += motion;
-            LockPaddle();            
+            LockPaddle();    
+                  
         }
 
         private void p1HandleInput()
@@ -77,6 +78,7 @@ namespace Pong
                 playerGamePad.IsButtonDown(Buttons.LeftThumbstickDown) ||
                 playerGamePad.IsButtonDown(Buttons.DPadDown))
                 motion.Y = 1;
+            
         }
 
         private void LockPaddle()

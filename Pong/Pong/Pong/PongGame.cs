@@ -25,7 +25,7 @@ namespace Pong
         SpriteFont font;
         Color bgcolor;
         Rectangle screenRectangle;
-        bool paused;
+
 
         // screen resolution
         const int X_RESOLUTION = 1280;
@@ -59,14 +59,17 @@ namespace Pong
         SaveGameData saveGameData;
 
         // gamestates
-        enum GameState
+        public enum GameState
         {
             MainMenu,
             ScoreScreen,
             Playing,
+            Paused,
         }
-        GameState currentGameState = GameState.MainMenu;
-        //Menu
+        public static GameState currentGameState = GameState.MainMenu;
+        
+        // input handling
+        KeyboardState prevKeyboardState;
 
         public PongGame()
         {
@@ -132,7 +135,6 @@ namespace Pong
             player2Paddle = new Paddle(tempTexture, screenRectangle, 2);
             font = Content.Load<SpriteFont>("font");
             bgcolor = Color.DarkSlateGray;
-            paused = false;
 
             // initialize save game data
             pongScore = 0;
@@ -188,13 +190,9 @@ namespace Pong
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            HandlePauseGameInput();
 
-
-            // Allows the game to exit
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
-                Keyboard.GetState().IsKeyDown(Keys.Escape))
-                this.Exit();
-
+            // play game is playing state and players both have life
             if (currentGameState == GameState.Playing && player1_Lives > 0 && player2_Lives > 0)
             {
                 //update ball and paddle
@@ -203,7 +201,7 @@ namespace Pong
                 ball.Update();
                 ball.PaddleCollision(player1Paddle.GetBounds(), player2Paddle.GetBounds());
                 LoadHighScore();
-            }else if(player1_Lives == 0 || player2_Lives  == 0)
+            }else if(player1_Lives == 0 || player2_Lives  == 0) // save game if a player has 0 life
             {
                 if (!scoreSaved)
                     UpdateSavedHighScore();
@@ -240,6 +238,29 @@ namespace Pong
                
             } 
             
+        }
+
+        private void HandlePauseGameInput()
+        {
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+            GamePadState currentGamePad1 = GamePad.GetState(PlayerIndex.One);
+            GamePadState currentGamePad2 = GamePad.GetState(PlayerIndex.Two);
+            // Allows the game to exit
+            if (currentGamePad1.Buttons.Back == ButtonState.Pressed ||
+                currentGamePad2.Buttons.Back == ButtonState.Pressed ||
+                currentKeyboardState.IsKeyDown(Keys.Escape))
+                this.Exit();
+
+            if ((currentKeyboardState.IsKeyUp(Keys.P) && prevKeyboardState.IsKeyDown(Keys.P)) ||
+                currentGamePad1.Buttons.Start == ButtonState.Pressed ||
+                currentGamePad2.Buttons.Start == ButtonState.Pressed)
+                if (currentGameState == GameState.Paused)
+                    PongGame.currentGameState = PongGame.GameState.Playing;
+                else
+                    PongGame.currentGameState = PongGame.GameState.Paused;
+
+
+            prevKeyboardState = currentKeyboardState;
         }
 
         private void LoadHighScore()
@@ -329,6 +350,8 @@ namespace Pong
             GraphicsDevice.Clear(bgcolor);
 
             spriteBatch.Begin();
+
+            // print player life and score to screen
             spriteBatch.DrawString(font, player1_Lives.ToString(), player1LifePosition, Color.White);
             spriteBatch.DrawString(font, player2_Lives.ToString(), player2LifePosition, Color.White);
             spriteBatch.DrawString(font, "Score: " + pongScore, scorePosition, Color.White);
