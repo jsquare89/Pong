@@ -129,7 +129,7 @@ namespace Pong
             Random rand = new Random();
 
             // use rand to get a random direction for ball to start with
-            motion = new Vector2(rand.Next(2, 6), -rand.Next(2, 6));
+            motion = new Vector2((float)rand.NextDouble() - 0.5f, (float)(rand.NextDouble() - 0.5f) / 1.5f);
             motion.Normalize();
 
             ballSpeed = ballStartSpeed;
