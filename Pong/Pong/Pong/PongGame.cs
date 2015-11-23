@@ -31,10 +31,19 @@ namespace Pong
         const int X_RESOLUTION = 1280;
         const int Y_RESOLUTION = 720;
 
+        // pause menu
+        Texture2D overlay;
+        Texture2D pauseMenu;
+        Vector2 pauseMenuPosition;
+
         // game objects
         Paddle player1Paddle;
         Paddle player2Paddle;
         Ball ball;
+
+        // sound effects
+        public SoundEffectInstance Music;
+        SoundEffect beep;
 
         // score support
         public static int player1_Lives;
@@ -90,7 +99,6 @@ namespace Pong
                 graphics.PreferredBackBufferWidth,
                 graphics.PreferredBackBufferHeight);
             bgcolor = Color.DarkSlateGray;
-
         }
 
         /// <summary>
@@ -110,7 +118,40 @@ namespace Pong
             scorePosition.Y = 20;
 
             currentGameState = GameState.Playing;
+
+            InitPauseMenu();
             base.Initialize();
+        }
+
+        private void InitPauseMenu()
+        {
+            overlay = new Texture2D(GraphicsDevice, X_RESOLUTION, Y_RESOLUTION, false, SurfaceFormat.Color);
+            // set the color to the amount of pixels
+            Color[] overlayData = new Color[X_RESOLUTION * Y_RESOLUTION];
+
+            // loop through all the colors setting them to whatever values we want
+            for (int i = 0; i < overlayData.Length; i++)
+            {
+                overlayData[i] = new Color(255, 255, 255, 120);
+            }
+
+            // set the color data on the texture
+            overlay.SetData(overlayData);
+
+
+            pauseMenuPosition = new Vector2(200, 100);
+            pauseMenu = new Texture2D(GraphicsDevice, X_RESOLUTION - 400, Y_RESOLUTION - 200, false, SurfaceFormat.Color);
+            // set the color to the amount of pixels
+            Color[] pauseMenuData = new Color[(X_RESOLUTION - 400) * (Y_RESOLUTION - 200)];
+
+            // loop through all the colors setting them to whatever values we want
+            for (int i = 0; i < pauseMenuData.Length; i++)
+            {
+                pauseMenuData[i] = new Color(255, 255, 255, 255);
+            }
+
+            // set the color data on the texture
+            pauseMenu.SetData(pauseMenuData);
         }
 
         /// <summary>
@@ -129,12 +170,18 @@ namespace Pong
 #endif
 
             Texture2D tempTexture = Content.Load<Texture2D>("ball");
-            ball = new Ball(tempTexture, screenRectangle);
+            ball = new Ball(this, tempTexture, screenRectangle);
             tempTexture = Content.Load<Texture2D>("paddle");
             player1Paddle = new Paddle(tempTexture, screenRectangle, 1);
             player2Paddle = new Paddle(tempTexture, screenRectangle, 2);
             font = Content.Load<SpriteFont>("font");
             bgcolor = Color.DarkSlateGray;
+
+            SoundEffect music = Content.Load<SoundEffect>("music");
+            Music = music.CreateInstance();
+            Music.Volume = 0.05f;
+            Music.IsLooped = true;
+            beep = Content.Load<SoundEffect>("beep");
 
             // initialize save game data
             pongScore = 0;
@@ -198,13 +245,14 @@ namespace Pong
                 //update ball and paddle
                 player1Paddle.Update();
                 player2Paddle.Update();
-                ball.Update();
-                ball.PaddleCollision(player1Paddle.GetBounds(), player2Paddle.GetBounds());
+                ball.Update(beep);
+                ball.PaddleCollision(player1Paddle.GetBounds(), player2Paddle.GetBounds(), beep);
                 LoadHighScore();
             }else if(player1_Lives == 0 || player2_Lives  == 0) // save game if a player has 0 life
             {
                 if (!scoreSaved)
                     UpdateSavedHighScore();
+                Music.Stop();
             }
 
             base.Update(gameTime);
@@ -253,12 +301,18 @@ namespace Pong
 
             if ((currentKeyboardState.IsKeyUp(Keys.P) && prevKeyboardState.IsKeyDown(Keys.P)) ||
                 currentGamePad1.Buttons.Start == ButtonState.Pressed ||
-                currentGamePad2.Buttons.Start == ButtonState.Pressed)
+                currentGamePad2.Buttons.Start == ButtonState.Pressed ||
+                (player1_Lives == 0 || player2_Lives  == 0))
                 if (currentGameState == GameState.Paused)
+                {
                     PongGame.currentGameState = PongGame.GameState.Playing;
+                    Music.Play();
+                }
                 else
+                {
                     PongGame.currentGameState = PongGame.GameState.Paused;
-
+                    Music.Pause();
+                }
 
             prevKeyboardState = currentKeyboardState;
         }
@@ -358,6 +412,31 @@ namespace Pong
             player1Paddle.Draw(spriteBatch);
             player2Paddle.Draw(spriteBatch);
             ball.Draw(spriteBatch);
+
+            if (currentGameState == GameState.Paused)
+            {
+                spriteBatch.Draw(overlay, new Vector2(0, 0), Color.Black);
+                spriteBatch.Draw(pauseMenu, pauseMenuPosition, Color.DodgerBlue);
+                
+                Vector2 highScorePosition = new Vector2(0, 0);
+                RenderTarget2D renderTarget = new RenderTarget2D(GraphicsDevice,
+                    (int)font.MeasureString("High Scores").X + 10,
+                    (int)font.MeasureString("High Scores").Y + 10);
+                highScorePosition.X = (X_RESOLUTION / 2) - (renderTarget.Width / 2);
+                highScorePosition.Y = pauseMenuPosition.Y + 10;
+                
+                spriteBatch.DrawString(font, "High Scores", highScorePosition, Color.White);
+                for ( int i = 0 ; i < saveGameData.highScore.Count() ; i++ )
+                {
+                    string scoreText =  i + 1 + " ----------------- " + saveGameData.highScore[ i ];
+                    renderTarget = new RenderTarget2D(GraphicsDevice,
+                    (int)font.MeasureString(scoreText).X + 10,
+                    (int)font.MeasureString(scoreText).Y + 10);
+                    Vector2 position = highScorePosition + new Vector2( 0, 40 * (i + 1) );
+                    position.X = (X_RESOLUTION / 2) - (renderTarget.Width / 2);
+                    spriteBatch.DrawString( font, scoreText, position, Color.White );
+                }
+            }
 
             spriteBatch.End();
 

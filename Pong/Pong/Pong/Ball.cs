@@ -13,6 +13,7 @@ namespace Pong
 {
     class Ball
     {
+        PongGame game;
         Texture2D texture;
         Rectangle screenBounds;
 
@@ -43,9 +44,10 @@ namespace Pong
             }
         }
 
-        public Ball(Texture2D texture, Rectangle screenBounds)
+        public Ball(PongGame game, Texture2D texture, Rectangle screenBounds)
         {
             bounds = new Rectangle(0, 0, texture.Width, texture.Height);
+            this.game = game;
             this.texture = texture;
             this.screenBounds = screenBounds;
             gameStart = false;
@@ -56,14 +58,17 @@ namespace Pong
             gameStart = false;
         }
 
-        public void Update()
+        public void Update(SoundEffect beep)
         {
             collided = false;
 
             // start the ball
             if (Keyboard.GetState().IsKeyDown(Keys.Space) ||
                 GamePad.GetState(PlayerIndex.One).IsButtonDown(Buttons.A))
+            { 
                 gameStart = true;
+                game.Music.Play();
+            }
 
             // set the ball motion and check for collisions
             if (gameStart)
@@ -71,12 +76,13 @@ namespace Pong
                 position += motion * ballSpeed;
                 ballSpeed += 0.001f;
 
-                CheckWallCollision();
+                CheckWallCollision(beep);
             }
             else
             {
                 //reset ball to starting paddle
                 StartPosition();
+                
             }
         }
 
@@ -84,7 +90,7 @@ namespace Pong
         /// 
         /// </summary>
         /// <returns></returns>
-        private void CheckWallCollision()
+        private void CheckWallCollision(SoundEffect beep)
         {
             // check against left bounding
             if (position.X < 0)
@@ -112,14 +118,16 @@ namespace Pong
             {
                 position.Y = 0;
                 motion.Y *= -1;
-
                 
+                beep.Play();
             }
             // check against bottom bounding
             if(position.Y > screenBounds.Height - texture.Height)
             {
                 position.Y = screenBounds.Height - texture.Height;
                 motion.Y *= -1;
+                
+                beep.Play();
             }
         }
 
@@ -139,7 +147,7 @@ namespace Pong
             position.Y = screenBounds.Height /2;
         }
 
-        public void PaddleCollision(Rectangle paddle1, Rectangle paddle2)
+        public void PaddleCollision(Rectangle paddle1, Rectangle paddle2, SoundEffect beep)
         {
             // rectangle to check for collision
             Rectangle ballLocation = new Rectangle(
@@ -154,12 +162,14 @@ namespace Pong
                 position.X = paddle1.X + texture.Width;
                 motion.X *= -1;
                 PongGame.pongScore++;
+                beep.Play();
             }
             if (paddle2.Intersects(ballLocation))
             {
                 position.X = paddle2.X - texture.Height;
                 motion.X *= -1;
                 PongGame.pongScore++;
+                beep.Play();
             }
             
         }
