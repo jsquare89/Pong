@@ -71,7 +71,6 @@ namespace Pong
         public enum GameState
         {
             MainMenu,
-            ScoreScreen,
             Playing,
             Paused,
         }
@@ -184,9 +183,7 @@ namespace Pong
             beep = Content.Load<SoundEffect>("beep");
 
             // initialize save game data
-            pongScore = 0;
             highScoreCount = 10;
-            scoreSaved = false;
             saveGameData.highScore = new int[highScoreCount];
             for (int i = 0; i < highScoreCount; i++)
             {
@@ -195,17 +192,19 @@ namespace Pong
             // Load save game high score into saveGameData struct
             GetDevice();
 
-            startGame();
+            StartGame();
             
         }
 
         /// <summary>
-        /// startGame() reloads level to beginning state
+        /// StartGame() reloads level to beginning state
         /// </summary>
-        protected void startGame()
+        protected void StartGame()
         {
-
             Load();
+            
+            pongScore = 0;
+            scoreSaved = false;
 
             // initialise paddles and ball
             ball.setStart();
@@ -237,7 +236,17 @@ namespace Pong
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            HandlePauseGameInput();
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+            GamePadState currentGamePad1 = GamePad.GetState(PlayerIndex.One);
+            GamePadState currentGamePad2 = GamePad.GetState(PlayerIndex.Two);
+            // Allows the game to exit
+            if (currentGamePad1.Buttons.Back == ButtonState.Pressed ||
+                currentGamePad2.Buttons.Back == ButtonState.Pressed ||
+                currentKeyboardState.IsKeyDown(Keys.Escape))
+                this.Exit();
+
+            HandlePauseGameInput(currentKeyboardState, currentGamePad1, currentGamePad2);
+            HandleRestartGameInput(currentKeyboardState, currentGamePad1, currentGamePad2);
 
             // play game is playing state and players both have life
             if (currentGameState == GameState.Playing && player1_Lives > 0 && player2_Lives > 0)
@@ -254,6 +263,9 @@ namespace Pong
                     UpdateSavedHighScore();
                 Music.Stop();
             }
+
+            
+            prevKeyboardState = currentKeyboardState;
 
             base.Update(gameTime);
         }
@@ -288,33 +300,36 @@ namespace Pong
             
         }
 
-        private void HandlePauseGameInput()
+        private void HandlePauseGameInput(KeyboardState currentKeyboardState, GamePadState currentGamePad1, GamePadState currentGamePad2)
         {
-            KeyboardState currentKeyboardState = Keyboard.GetState();
-            GamePadState currentGamePad1 = GamePad.GetState(PlayerIndex.One);
-            GamePadState currentGamePad2 = GamePad.GetState(PlayerIndex.Two);
-            // Allows the game to exit
-            if (currentGamePad1.Buttons.Back == ButtonState.Pressed ||
-                currentGamePad2.Buttons.Back == ButtonState.Pressed ||
-                currentKeyboardState.IsKeyDown(Keys.Escape))
-                this.Exit();
-
             if ((currentKeyboardState.IsKeyUp(Keys.P) && prevKeyboardState.IsKeyDown(Keys.P)) ||
                 currentGamePad1.Buttons.Start == ButtonState.Pressed ||
-                currentGamePad2.Buttons.Start == ButtonState.Pressed ||
-                (player1_Lives == 0 || player2_Lives  == 0))
+                currentGamePad2.Buttons.Start == ButtonState.Pressed)
                 if (currentGameState == GameState.Paused)
                 {
-                    PongGame.currentGameState = PongGame.GameState.Playing;
+                    currentGameState = GameState.Playing;
                     Music.Play();
                 }
                 else
                 {
-                    PongGame.currentGameState = PongGame.GameState.Paused;
+                    currentGameState = GameState.Paused;
                     Music.Pause();
                 }
 
-            prevKeyboardState = currentKeyboardState;
+        }
+
+        private void HandleRestartGameInput(KeyboardState currentKeyboardState, GamePadState currentGamePad1, GamePadState currentGamePad2)
+        {
+            if (currentGameState == GameState.Paused)
+            {
+                if ((currentKeyboardState.IsKeyUp(Keys.R) && prevKeyboardState.IsKeyDown(Keys.R)) ||
+                    currentGamePad1.Buttons.RightShoulder == ButtonState.Pressed ||
+                    currentGamePad2.Buttons.RightShoulder == ButtonState.Pressed)
+                {
+                    StartGame();
+                    currentGameState = GameState.Playing;
+                }
+            }
         }
 
         private void LoadHighScore()
@@ -418,24 +433,32 @@ namespace Pong
                 spriteBatch.Draw(overlay, new Vector2(0, 0), Color.Black);
                 spriteBatch.Draw(pauseMenu, pauseMenuPosition, Color.DodgerBlue);
                 
-                Vector2 highScorePosition = new Vector2(0, 0);
+                Vector2 textPosition = new Vector2(0, 0);
                 RenderTarget2D renderTarget = new RenderTarget2D(GraphicsDevice,
                     (int)font.MeasureString("High Scores").X + 10,
                     (int)font.MeasureString("High Scores").Y + 10);
-                highScorePosition.X = (X_RESOLUTION / 2) - (renderTarget.Width / 2);
-                highScorePosition.Y = pauseMenuPosition.Y + 10;
+                textPosition.X = (X_RESOLUTION / 2) - (renderTarget.Width / 2);
+                textPosition.Y = pauseMenuPosition.Y + 10;
                 
-                spriteBatch.DrawString(font, "High Scores", highScorePosition, Color.White);
+                spriteBatch.DrawString(font, "High Scores", textPosition, Color.White);
                 for ( int i = 0 ; i < saveGameData.highScore.Count() ; i++ )
                 {
                     string scoreText =  i + 1 + " ----------------- " + saveGameData.highScore[ i ];
                     renderTarget = new RenderTarget2D(GraphicsDevice,
                     (int)font.MeasureString(scoreText).X + 10,
                     (int)font.MeasureString(scoreText).Y + 10);
-                    Vector2 position = highScorePosition + new Vector2( 0, 40 * (i + 1) );
+                    Vector2 position = textPosition + new Vector2( 0, 40 * (i + 1) );
                     position.X = (X_RESOLUTION / 2) - (renderTarget.Width / 2);
                     spriteBatch.DrawString( font, scoreText, position, Color.White );
                 }
+
+                string infoText = "Press 'P/Start' to resume or 'R/Right Shoulder' to restart";
+                renderTarget = new RenderTarget2D(GraphicsDevice,
+                (int)font.MeasureString(infoText).X + 10,
+                (int)font.MeasureString(infoText).Y + 10);
+                textPosition.X = (X_RESOLUTION / 2) - (renderTarget.Width / 2);
+                textPosition.Y = pauseMenuPosition.Y + pauseMenu.Height - 40;
+                spriteBatch.DrawString(font, infoText, textPosition, Color.White);
             }
 
             spriteBatch.End();
