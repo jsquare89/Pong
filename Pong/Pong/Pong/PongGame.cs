@@ -79,6 +79,9 @@ namespace Pong
         // input handling
         KeyboardState prevKeyboardState;
 
+        /// <summary>
+        /// PongGame constructor. Setup screen size and background.
+        /// </summary>
         public PongGame()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -122,6 +125,7 @@ namespace Pong
             base.Initialize();
         }
 
+        // Helper method for creating the pause menu overlay
         private void InitPauseMenu()
         {
             overlay = new Texture2D(GraphicsDevice, X_RESOLUTION, Y_RESOLUTION, false, SurfaceFormat.Color);
@@ -257,10 +261,11 @@ namespace Pong
                 ball.Update(beep);
                 ball.PaddleCollision(player1Paddle.GetBounds(), player2Paddle.GetBounds(), beep);
                 LoadHighScore();
-            }else if(player1_Lives == 0 || player2_Lives  == 0) // save game if a player has 0 life
+            } else if(player1_Lives == 0 || player2_Lives  == 0) // save game if a player has 0 life
             {
                 if (!scoreSaved)
                     UpdateSavedHighScore();
+
                 Music.Stop();
             }
 
@@ -300,6 +305,7 @@ namespace Pong
             
         }
 
+        // help handles pause game input and pause the music when paused
         private void HandlePauseGameInput(KeyboardState currentKeyboardState, GamePadState currentGamePad1, GamePadState currentGamePad2)
         {
             if ((currentKeyboardState.IsKeyUp(Keys.P) && prevKeyboardState.IsKeyDown(Keys.P)) ||
@@ -317,7 +323,8 @@ namespace Pong
                 }
 
         }
-
+        
+        // helps handles the restart game request
         private void HandleRestartGameInput(KeyboardState currentKeyboardState, GamePadState currentGamePad1, GamePadState currentGamePad2)
         {
             if (currentGameState == GameState.Paused)
